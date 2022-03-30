@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Gamedev Canvas Workshop</title>
+    <!-- mengatur style canvas pada game -->
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      canvas {
+        background: #eee;
+        display: block;
+        margin: 0 auto;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- membuat elemen canvas sebagai wadah untuk menggambar kode game dengan ukuran : lebar 500 dan tinggi 350 -->
+    <canvas id="myCanvas" width="500" height="350"></canvas>
+    <script>
+      //membuat variabel canvas untuk memilih elemen HTML dengan id "myCanvas"
+      var canvas = document.getElementById("myCanvas");
+      // membuat variabel context sebagai objek untuk menggambar di canvas (pensil/kuas)
+      var context = canvas.getContext("2d");
+
+      //membuat variabel speed untuk mengatur kecepatan
+      var speed = 10;
+      var gameSpeed = 1;
+
+      //membuat variabel me atau player untuk mengatur letak koordinat, serta ukuran lebar dan tingginya
+      var me = {
+        //mendefinisikan koordinat x
+        x: canvas.width / 2 - 5,
+        //mendefinisikan koordinat y
+        y: canvas.height / 2 - 5,
+        //ukuran lebar player 10
+        width: 10,
+        //ukuran tinggi player 10
+        height: 10,
+      };
+
+      //membuat variabel bullets untuk menampung peluru dalam bentuk array
+      var bullets = [];
+      //inisialisasi variabel untuk objek dinding penghalang dengan panjang 200
+      var wallLength = 200;
+      //variabel dinding penghalang
+      var walls = {
+        //mengatur ukuran serta posisi dinding kiri
+        left: {
+          x: 10,
+          y: canvas.height / 2 - wallLength / 2,
+          width: 10,
+          height: wallLength,
+          //mengembalikan nilai elemen saat ini, yaitu kiri
+          pos: "left",
+        },
+        //mengatur ukuran serta posisi dinding kanan
+        right: {
+          x: canvas.width - 20,
+          y: canvas.height / 2 - wallLength / 2,
+          width: 10,
+          height: wallLength,
+          //mengembalikan nilai elemen saat ini, yaitu kanan
+          pos: "right",
+        },
+        //mengatur ukuran serta posisi dinding atas
+        top: {
+          x: canvas.width / 2 - wallLength,
+          y: 10,
+          width: wallLength * 2,
+          height: 10,
+          //mengembalikan nilai elemen saat ini, yaitu atas
+          pos: "top",
+        },
+        //mengatur ukuran serta posisi dinding bawah
+        bottom: {
+          x: canvas.width / 2 - wallLength,
+          y: canvas.height - 20,
+          width: wallLength * 2,
+          height: 10,
+          //mengembalikan nilai elemen saat ini, yaitu bawah
+          pos: "bottom",
+        },
+      };
+
+      //inisialisasi variabel gravity untuk mengatur kecepatan gravitasi atau kecepatan dinding ke arah objek 'me'
+      var gravity = 0.2;
+      //inisialisasi variabel bounce untuk mengatur pantulan dinding saat terkena peluru
+      var bounce = 4;
+      //inisialisasi variabel distance untuk mengatur jarak
+      var distance = 70;
+      //inisialisasi variabel dir utk mengatur arah elemen bergerak, dalam hal ini peluru yang didefinisikan sebagai suatu karakter
+      var dir = "";
+
+      //memberi aksi ketika user menekan tombol arah (up, down, left, right) pada keyboard
+      document.onkeyup = function (e) {
+        if (!e) {
+          e = window.e;
+        }
+        //kode untuk browser tertentu, properti keyCode mengembalikan kode karakter unicode kunci yang memicu onkeypress
+        var code = e.keyCode;
+        if (e.charCode && codee == 0) {
+          //charCode untuk mengambil nilai Unicode untuk karakter pada posisi tertentu dalam string
+          code = e.charCode;
+        }
+
+        //mengatur penekanan tombol keyboard
+        switch (code) {
+          case 37: //left
+            //mengatur penekanan tombol keyboard kiri ke arah kiri
+            if (dir != "left") dir = "left";
+            //memasukkan peluru dalam array yang telah didefinisikan sebelumnya
+            bullets.push({
+              x: me.x,
+              y: me.y,
+              width: 10,
+              height: 10,
+              dir: dir,
+            });
+            break;
+          case 40:
+            //mengatur penekanan tombol keyboard bawah ke arah bawah
+            if (dir != "down") dir = "down";
+            //memasukkan peluru dalam array yang telah didefinisikan sebelumnya
+            bullets.push({
+              x: me.x,
+              y: me.y,
+              width: 10,
+              height: 10,
+              dir: dir,
+            });
+            break;
+          case 39:
+            //mengatur penekanan tombol keyboard kanan ke arah kanan
+            if (dir != "right") dir = "right";
+            //memasukkan peluru dalam array yang telah didefinisikan sebelumnya
+            bullets.push({
+              x: me.x,
+              y: me.y,
+              width: 10,
+              height: 10,
+              dir: dir,
+            });
+            break;
+          case 38:
+            //mengatur penekanan tombol keyboard atas ke arah atas
+            if (dir != "up") dir = "up";
+            //memasukkan peluru dalam array yang telah didefinisikan sebelumnya
+            bullets.push({
+              x: me.x,
+              y: me.y,
+              width: 10,
+              height: 10,
+              dir: dir,
+            });
+            break;
+        }
+      };
+
+      //inisialisasi variabel wallSpeed untuk mengatur kecepatan dinding penghalang
+      var wallSpeed = 0.2;
+      //inisialisasi variabel walletBackward untuk membuat dinding bergerak mundur ketika terkena bullet
+      var walletBackward = 20;
+      //inisialisasi variabel score
+      var score = 0;
+      //fungsi untuk menggambar dinding penghalang beserta settingannya
+      function makeWalls() {
+        //perulangan untuk variabel index pada dinding penghalang
+        for (var index in walls) {
+          //membuat variabel wall untuk menyimpan array index dari dinding penghalang
+          var wall = walls[index];
+          //membuat garis baru atau memulai untuk menggambar
+          context.beginPath();
+          //menggambar dinding penghalang dengan menentukan koordinat, serta ukuran lebar dan tingginya
+          context.rect(wall.x, wall.y, wall.width, wall.height);
+          //mengatur warna dinding penghalang
+          context.fillStyle = "blue";
+          //memasukkan warna pada dinding penghalang agar tidak transparan
+          context.fill();
+          //mengembalikan ke titik awal
+          context.closePath();
+
+          if (wall.pos == "left") {
+            wall.x += wallSpeed;
+            //jika koordinat x dari dinding ditambah dengan lebar dinding telah melebihi atau sama dengan player
+            if (wall.x + wall.width >= me.x) {
+              //maka kalah, dan pemanggilan function loose () pun dilakukan
+              loose();
+            }
+          }
+
+          if (wall.pos == "right") {
+            wall.x -= wallSpeed;
+            //jika koordinat x dari dinding ditambah dengan lebar dinding kurang dari atau sama dengan player
+            if (wall.x + wall.width <= me.x) {
+              //maka kalah, dan pemanggilan function loose () pun dilakukan
+              loose();
+            }
+          }
+
+          if (wall.pos == "top") {
+            wall.y += wallSpeed;
+            //jika koordinat y dari dinding ditambah dengan tinggi dinding telah melebihi atau sama dengan player
+            if (wall.y + wall.height >= me.y) {
+              //maka kalah, dan pemanggilan function loose () pun dilakukan
+              loose();
+            }
+          }
+
+          if (wall.pos == "bottom") {
+            wall.y -= wallSpeed;
+            //jika koordinat y dari dinding ditambah dengan tinggi dinding kurang dari atau sama dengan player
+            if (wall.y + wall.height <= me.y) {
+              //maka kalah, dan pemanggilan function loose () pun dilakukan
+              loose();
+            }
+          }
+          //console.log(walls[wall]);
+        }
+      }
+
+      //fungsi untuk menampilkan hasil akhir atau score ketika kalah
+      function loose() {
+        alert("You Lose! score : " + score);
+      }
+      var collid = false;
+      //fungsi untuk menggambar peluru beserta settingannya
+      function makeBullet() {
+        //perulangan untuk isi dari peluru
+        for (bullet of bullets) {
+          //menggambar peluru dengan menentukan koordinat, serta ukuran lebar dan tingginya
+          context.rect(bullet.x, bullet.y, bullet.width, bullet.height);
+          //menentukan warna peluru
+          context.fillStyle = "red";
+          //memasukkan warna pada peluru agar tidak transparan
+          context.fill();
+          //mengembalikan ke titik awal
+          context.closePath();
+
+          //jika peluru ditembakkan ke kiri
+          if (bullet.dir == "left") {
+            //maka koordinat x dari peluru dikurangi 10 (ukuran peluru)
+            bullet.x -= 10;
+          }
+          //jika peluru ditembakkan ke kanan
+          if (bullet.dir == "right") {
+            //maka koordinat x dari peluru ditambah 10 (ukuran peluru)
+            bullet.x += 10;
+          }
+          //jika peluru ditembakkan ke atas
+          if (bullet.dir == "up") {
+            //maka koordinat y dari peluru dikurangi 10 (ukuran peluru)
+            bullet.y -= 10;
+          }
+          //jika peluru ditembakkan ke bawah
+          if (bullet.dir == "down") {
+            ////maka koordinat y dari peluru ditambah 10 (ukuran peluru)
+            bullet.y += 10;
+          }
+
+          if (bullet.x >= canvas.width || bullet.x <= 0 || bullet.y >= canvas.height || bullet.y <= 0) {
+            bullets.splice(bullets.indexOf(bullet), 1);
+          }
+
+          //jika bullet.dir == 'right'
+          if (bullet.dir == "right") {
+            //jika koordinat bullet x lebih besar atau sama dengan koordinat tembok kanan
+            if (bullet.x >= walls["right"].x) {
+              walls["right"].x = walls["right"].x + walletBackward; //maka koordinat tembok kanan akan ditambah sejumlah walletBackward
+              collid = true; //collid akan bernilai true
+            }
+          }
+          //jika bullet.dir == 'up'
+          if (bullet.dir == "up") {
+            //jika koordinat bullet y lebih kecil atau sama dengan koordinat tembok atas
+            if (bullet.y <= walls["top"].y) {
+              walls["top"].y = walls["top"].y - walletBackward; //maka koordinat tembok atas akan dikurangi sejumlah walletBackward
+              collid = true; //collid akan bernilai true
+            }
+          }
+          //jika bullet.dir == 'down'
+          if (bullet.dir == "down") {
+            //jika koordinat bullet y lebih besar atau sama dengan koordinat tembok bawah
+            if (bullet.y >= walls["bottom"].y) {
+              walls["bottom"].y = walls["bottom"].y + walletBackward; //maka koordinat tembok bawah akan dikurangi sejumlah walletBackward
+              collid = true; //collid akan bernilai true
+            }
+          }
+          //jika bullet.dir == 'left'
+          if (bullet.dir == "left") {
+            //jika koordinat bullet x lebih kecil atau sama dengan koordinat tembok kiri
+            if (bullet.x <= walls["left"].x) {
+              walls["left"].x = walls["left"].x - walletBackward; //maka koordinat tembok kiri akan dikurangi sejumlah walletBackward
+              collid = true; //collid akan bernilai true
+            }
+          }
+
+          //jika collid bernilai true
+          if (collid) {
+            bullets.splice(bullets.indexOf(bullet), 1);
+            collid = false; //collid bernilai false kembali
+            score++; //score bertambah 1
+          }
+        }
+      }
+
+      //fungsi untuk menghapus peluru dengan parameter index
+      function removeBullet(index) {
+        //menghapus peluru yang dimulai dari index dengan jumlah elemen 1
+        bullets.splice(index, 1);
+      }
+
+      //fungsi untuk menggambar player beserta settingannya
+      function makeMe() {
+        //membuat garis baru atau memulai untuk menggambar
+        context.beginPath();
+        //menggambar player dengan menentukan koordinat, serta ukuran lebar dan tingginya
+        context.rect(me.x, me.y, me.width, me.height);
+        ////menentukan warna player
+        context.fillStyle = "green";
+        //memasukkan warna pada player agar tidak transparan
+        context.fill();
+        context.closePath(); //mengembalikan ke titik awal
+      }
+
+      //fungsi random : mengembalikan angka acak antara min dan max
+      function rnd(min, max) {
+        var r = Math.round(Math.random() * (max - min) + min);
+        return r - (r % speed);
+      }
+
+      //membuat variabel wallPoses yang berisi nilai array dari (kiri, kanan, atas, bawah)
+      var wallPoses = ["left", "right", "top", "bottom"];
+      //membuat variabel frame dengan nilai 0
+      var frame = 0;
+      //fungsi perulangan
+      (function loop() {
+        //reqAnimationFrame digunakan untuk meminta atau memulai suatu animasi dalam bingkai fungsi tersebut
+        requestAnimationFrame(function () {
+          //menghapus gambar pada canvas
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          //memanggil fungsi makeMe (untuk player)
+          makeMe();
+          //memanggil fungsi makeBullet() (untuk peluru)
+          makeBullet();
+          //memanggil fungsi makeWalls() (untuk dinding penghalang)
+          makeWalls();
+
+          //Untuk menaikkan kesulitan dalam game
+          if (score % 50 == 0) {
+            //Jika skor % 50 = 0 / skor player merupakan kelipatan 50 (50,100,150,...), maka...
+            walletBackward -= 1; //jarak pantulan dinding akan berkurang 1
+            wallSpeed += 0.1; //kecepatan gerak dinding bertambah 0.1
+            score += 1; //pertambahan score + 1
+            console.log(score);
+            console.log(wallSpeed);
+            console.log(walletBackward);
+          }
+          if (frame % gameSpeed == 0) {
+            frame++;
+          }
+          //perulangan terus menerus dari function loop() selama player/me tidak menabrak dinding penghalang
+          loop();
+        });
+      })();
+    </script>
+  </body>
+</html>

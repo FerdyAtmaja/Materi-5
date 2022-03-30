@@ -1,0 +1,13 @@
+/* Style untuk semua*/
+* {
+  padding: 0;
+  margin: 0;
+}
+
+/*Style untuk bagian canvas*/
+canvas {
+  background-image: url("img/city.jpg");
+  background-size: 350px 350px;
+  display: block;
+  margin: 0 auto;
+}
